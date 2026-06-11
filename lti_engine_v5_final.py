@@ -26,14 +26,14 @@ def classify_role(series: pd.Series) -> str:
     """
     s = preprocess_series(series)
     grad = np.gradient(s.values)
-    
+
     epsilon = 1e-9
     sparsity = np.max(np.abs(grad)) / (np.mean(np.abs(grad)) + epsilon)
-    
+
     # Zero crossings to detect oscillatory flow
     zero_crossings = np.where(np.diff(np.signbit(grad)))[0]
     has_reversals = len(zero_crossings) > 0
-    
+
     if sparsity > 3 and has_reversals:
         return "F"  # Flow (Pulse/Impulse)
     elif sparsity > 3:
@@ -50,12 +50,17 @@ def hysteresis_area(x: pd.Series, y: pd.Series) -> float:
     # Min-Max Normalization
     x_norm = (x - x.min()) / (x.max() - x.min() + 1e-9)
     y_norm = (y - y.min()) / (y.max() - y.min() + 1e-9)
-    
-    x_val = x_norm.values
-    y_val = y_norm.values
-    
+
+    # FIX: Mean-centering to stabilize the orbit and avoid closing-edge artifacts
+    x_val = x_norm.values - x_norm.mean()
+    y_val = y_norm.values - y_norm.mean()
+
     # Shoelace Formula for signed area
     area = 0.5 * np.sum(x_val[:-1] * y_val[1:] - x_val[1:] * y_val[:-1])
+    
+    # FIX: Explicitly close the loop to prevent artificial boundaries
+    area += 0.5 * (x_val[-1] * y_val[0] - x_val[0] * y_val[-1])
+    
     return area
 
 def _granger_pvalue(cause: pd.Series, effect: pd.Series, max_lag: int) -> float:
@@ -113,13 +118,20 @@ def robust_causal_direction(name_a: str, series_a: pd.Series, name_b: str, serie
     if len(aligned) < 30:
         return "UNDETERMINED", 0.0, "insufficient_data"
 
-    def _make_stationary(s: pd.Series) -> pd.Series:
-        p = adfuller(s.dropna(), autolag="AIC")[1]
-        return s.diff().dropna() if p > 0.05 else s
-
-    sa, sb = _make_stationary(aligned[name_a]), _make_stationary(aligned[name_b])
-    aligned2 = pd.concat([sa, sb], axis=1, join="inner").dropna()
+    # FIX: Joint Stationarity Check to preserve Phase Space alignment
+    p_a = adfuller(aligned[name_a].dropna(), autolag="AIC")[1]
+    p_b = adfuller(aligned[name_b].dropna(), autolag="AIC")[1]
     
+    if p_a > 0.05 or p_b > 0.05:
+        # If either is non-stationary, difference BOTH to maintain structural parity
+        sa = aligned[name_a].diff().dropna()
+        sb = aligned[name_b].diff().dropna()
+    else:
+        sa = aligned[name_a]
+        sb = aligned[name_b]
+
+    aligned2 = pd.concat([sa, sb], axis=1, join="inner").dropna()
+
     if len(aligned2) < 24:
         return "UNDETERMINED", 0.0, "insufficient_obs"
 
@@ -148,7 +160,7 @@ def robust_causal_direction(name_a: str, series_a: pd.Series, name_b: str, serie
     if abs(delta) < 0.05:
         h_area = hysteresis_area(aligned[name_a], aligned[name_b])
         confidence = max(evidence_ab, evidence_ba) + min(abs(h_area), 0.2) # Boost confidence slightly with hysteresis
-        
+
         if h_area > 0.01:
             return f"{name_a} → {name_b}", confidence, "hysteresis_tie_breaker"
         elif h_area < -0.01:
