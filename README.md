@@ -8,7 +8,7 @@
 
 ## 📄 Research Paper
 
-**[Read the official preprint: Escaping the Embedding Trap](./papers/NCS_Research_Paper.pdf)**
+**[Read the official preprint: Escaping the Embedding Trap](papers/NCS_Research_Paper.pdf)**
 
 Large Language Models (LLMs) exhibit a systematic failure termed the **"Embedding Trap"**—the conflation of distributional co-occurrence statistics with physical causal structure. This repository contains the official implementation of **Neuro-Causal Symbiosis (NCS)**, a novel architecture that resolves this limitation through strict functional decomposition.
 
