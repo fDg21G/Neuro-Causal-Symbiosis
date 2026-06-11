@@ -52,10 +52,11 @@ st.markdown(dark_theme_css, unsafe_allow_html=True)
 # SECTION 2 ─ HELPER COMPONENTS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def render_confidence_bar(confidence: float) -> str:
+def render_confidence_bar(confidence: float, system_used: int) -> str:
+    label = "EMPIRICAL CONFIDENCE" if system_used == 1 else "SEMANTIC CONSENSUS (SCI)"
     return f"""
     <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0;">
-        <div style="font-weight: 700; color: #00d4ff; font-size: 14px;">CONFIDENCE</div>
+        <div style="font-weight: 700; color: #00d4ff; font-size: 14px;">{label}</div>
         <div style="flex: 1; background: #1a1f3a; border: 1px solid #2d3a54; border-radius: 4px; height: 24px; overflow: hidden;">
             <div style="background: linear-gradient(90deg, #00ff88, #00d4ff); width: {confidence*100}%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; color: #0a0e27;">
                 {confidence:.1%}
@@ -63,11 +64,6 @@ def render_confidence_bar(confidence: float) -> str:
         </div>
     </div>
     """
-
-def render_system_badge(system_used: int) -> str:
-    if system_used == 1:
-        return """<div style="display: inline-block; padding: 8px 16px; border-radius: 20px; background: rgba(0, 255, 136, 0.1); border: 2px solid #00ff88; color: #00ff88; font-weight: 700; font-size: 13px;">⚡ SYSTEM 1: EMPIRICAL REFLEX CORE</div>"""
-    return """<div style="display: inline-block; padding: 8px 16px; border-radius: 20px; background: rgba(157, 78, 221, 0.1); border: 2px solid #9d4edd; color: #9d4edd; font-weight: 700; font-size: 13px;">🧠 SYSTEM 2: SEMANTIC CLOUD (LLM)</div>"""
 
 def render_result_card(result: CausalResult) -> None:
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -79,9 +75,10 @@ def render_result_card(result: CausalResult) -> None:
         st.markdown(f"<div style='color: #a8b5cc; font-size: 14px; font-style: italic;'>{result.direction}</div>", unsafe_allow_html=True)
     with col3:
         conf_color = "#00ff88" if result.confidence >= 0.80 else "#ffaa00" if result.confidence >= 0.60 else "#ff3366"
-        st.markdown(f"<div style='text-align: right;'><div style='color: {conf_color}; font-size: 36px; font-weight: 700;'>{result.confidence:.0%}</div><div style='color: #a8b5cc; font-size: 12px;'>CONFIDENCE</div></div>", unsafe_allow_html=True)
+        label_short = "CONFIDENCE" if result.system_used == 1 else "SCI"
+        st.markdown(f"<div style='text-align: right;'><div style='color: {conf_color}; font-size: 36px; font-weight: 700;'>{result.confidence:.0%}</div><div style='color: #a8b5cc; font-size: 12px;'>{label_short}</div></div>", unsafe_allow_html=True)
     
-    st.markdown(render_confidence_bar(result.confidence), unsafe_allow_html=True)
+    st.markdown(render_confidence_bar(result.confidence, result.system_used), unsafe_allow_html=True)
     st.markdown(f"<div style='display: flex; gap: 20px; margin-top: 16px; padding: 12px; background: rgba(45, 58, 84, 0.5); border-radius: 8px;'><div><div style='color: #a8b5cc; font-size: 11px; text-transform: uppercase;'>Data Source</div><div style='color: #00d4ff; font-size: 13px; font-weight: 600;'>{result.data_source}</div></div><div><div style='color: #a8b5cc; font-size: 11px; text-transform: uppercase;'>Method</div><div style='color: #00d4ff; font-size: 13px; font-weight: 600;'>{result.method}</div></div></div>", unsafe_allow_html=True)
     
     if result.time_range:
@@ -93,6 +90,13 @@ def render_result_card(result: CausalResult) -> None:
         with st.expander("⚠️ Warnings"):
             for warning in result.warnings:
                 st.warning(warning)
+
+def render_system_badge(system_used: int) -> str:
+    if system_used == 1:
+        return """<div style="display: inline-block; padding: 8px 16px; border-radius: 20px; background: rgba(0, 255, 136, 0.1); border: 2px solid #00ff88; color: #00ff88; font-weight: 700; font-size: 13px;">⚡ SYSTEM 1: EMPIRICAL REFLEX CORE</div>"""
+    return """<div style="display: inline-block; padding: 8px 16px; border-radius: 20px; background: rgba(157, 78, 221, 0.1); border: 2px solid #9d4edd; color: #9d4edd; font-weight: 700; font-size: 13px;">🧠 SYSTEM 2: SEMANTIC CLOUD (LLM)</div>"""
+
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 3 ─ PAGE LAYOUT
