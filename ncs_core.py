@@ -269,7 +269,7 @@ class SemanticCloud:
             logger.error("LLM API call failed: %s. Using fallback.", e)
             return self._fallback_reasoning(query, entity_a, entity_b)
 
-    def _build_prompt(self, query: str, entity_a: str, entity_b: str, s1_context: str) -> str:
+   def _build_prompt(self, query: str, entity_a: str, entity_b: str, s1_context: str) -> str:
         return f"""You are a causal inference expert reasoning about abstract or semantic concepts where empirical time-series data is unavailable.
 
 User Query: "{query}"
@@ -282,18 +282,18 @@ TASK:
    - "{entity_b} → {entity_a}" (B causes A)
    - BIDIRECTIONAL (mutual causation)
    - UNDETERMINED (insufficient evidence)
-3. Provide a confidence score from 0.4 (very low) to 0.95 (very high).
+3. Provide a Semantic Consensus Index (SCI) from 0.40 (very low) to 0.95 (very high) reflecting the degree of sociological and linguistic consensus on this relationship.
 
 IMPORTANT CONSTRAINTS:
 - This is SEMANTIC reasoning, not empirical data analysis
 - Be skeptical of bidirectional claims unless truly justified
-- Confidence should reflect uncertainty inherent in abstract domains
+- The SCI reflects human consensus, not a physical probability
 - Consider alternative interpretations and edge cases{s1_context}
 
 RESPONSE FORMAT (JSON):
 {{
     "direction": "A → B",
-    "confidence": 0.65,
+    "sci_score": 0.65,
     "reasoning": "Brief explanation of the causal mechanism",
     "caveats": "Important limitations or alternative views"
 }}
@@ -306,7 +306,7 @@ Respond ONLY with valid JSON, no preamble."""
                 return self._fallback_reasoning("", entity_a, entity_b)
             data = json.loads(match.group())
             direction = data.get("direction", f"{entity_a} → {entity_b}").strip()
-            confidence = float(data.get("confidence", 0.55))
+            confidence = float(data.get("sci_score", data.get("confidence", 0.55)))
             reasoning = data.get("reasoning", "")
             caveats = data.get("caveats", "")
             explanation = f"{reasoning} [Caveats: {caveats}]" if caveats else reasoning
@@ -445,7 +445,7 @@ class NCS_Engine:
         s1_result = CausalResult(
             query=query, entity_a=var_a_name, entity_b=var_b_name, direction=direction,
             confidence=confidence, method=method, system_used=1,
-            data_source=f"FRED ({var_a_id}, {var_b_id})",
+            data_source=f"FRED Synthetic Sandbox ({var_a_id}, {var_b_id})",
             time_range=f"{series_a.index[0].date()} to {series_a.index[-1].date()}",
         )
 
